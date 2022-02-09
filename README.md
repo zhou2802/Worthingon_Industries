@@ -11,3 +11,9 @@ This is the orginal workbook sent from Worthington Industries. As the file name 
 
 Data Folder:
 This folder contains 5 .csv files, each containing the sheet of the same name from the original workbook. These files are what we will use throughout our project. As such, they can be edited as necessary. The .csv format is used here in order to facilitate easy importing to the programs we intend to use (R, Tableau, etc.).
+
+### Authors
+Ethan Byrd
+Patrick Tiernan
+Gordon Woolbert
+Jiayi Zhou
