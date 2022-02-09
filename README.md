@@ -1,9 +1,9 @@
 # Worthingon Industries
 
 ### Contributors
-Ethan Byrd
-Patrick Tiernan
-Gordon Woolbert
+Ethan Byrd,
+Patrick Tiernan,
+Gordon Woolbert,
 Jiayi Zhou
 
 ### Purpose
