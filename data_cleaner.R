@@ -34,6 +34,7 @@ clean_bookings <- clean_bookings %>%
                        )
     )
   )
+clean_bookings %>% write.csv("Cleaned_Data/clean_bookings.csv")
 
 #--------------------------------------------------------------------------------------------------------------------------
 # Current Inventory
@@ -48,6 +49,7 @@ clean_current_inventory <- clean_current_inventory %>%
     market_code = as.integer(gsub("Primary_Market_Code_", "", market_code)),
     material_type_ID = as.integer(gsub("Material_Type_", "", material_type_ID))
   )
+clean_current_inventory %>% write.csv("Cleaned_Data/clean_current_inventory.csv")
 
 #--------------------------------------------------------------------------------------------------------------------------
 # Forecast
@@ -83,6 +85,7 @@ clean_forecast <- clean_forecast %>%
                    )
     )
   )
+clean_forecast %>% write.csv("Cleaned_Data/clean_forecast.csv")
 
 #--------------------------------------------------------------------------------------------------------------------------
 # Inventory Trends
@@ -118,6 +121,7 @@ clean_inventory_trends <- clean_inventory_trends %>%
                    )
     )
   )
+clean_inventory_trends %>% write.csv("Cleaned_Data/clean_inventory_trends.csv")
 
 #--------------------------------------------------------------------------------------------------------------------------
 # Shipments
@@ -153,6 +157,7 @@ clean_shipments <- clean_shipments %>%
                    )
     )
   )
+clean_shipments %>% write.csv("Cleaned_Data/clean_shipments.csv")
 
 #--------------------------------------------------------------------------------------------------------------------------
 # Create .RData Object
