@@ -20,3 +20,12 @@ This folder contains 5 .csv files, each containing the sheet of the same name fr
 
 ORIGINAL_DATA_DO_NOT_TOUCH.xlsx:  
 This is the orginal workbook sent from Worthington Industries. As the file name suggests, this file should not be edited except under extreme circumstances. It's only purpose is to be a (hopefully unnecessary) backup.
+
+Worthington_Industries.Rproj:  
+This file contains workspace data for our R analysis.
+
+clean_data.RData:  
+This file contains an object that has all 5 data sets saved in a format native to R and will be used for our R analysis.
+
+data_cleaner.R:  
+This R script cleans the data sets found in the Data folder and then writes the newly cleaned data sets to both the Cleaned_Data folder (as .csv files) and to clean_data.RData.
