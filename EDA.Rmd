@@ -90,7 +90,7 @@ aggregate_master %>%
     geom_line(aes(x = date, y = shipped_tons, color = "Shipped Tons")) +
     geom_line(aes(x = date, y = booked_tons, color = "Booked Tons")) +
     labs(
-      title = "Steel Booking/Availability/Shipping Trends",
+      title = "Steel Booking/Availability/Shipping/Forecast Trends",
       x = "Date",
       y = "Tons of Steel",
       color = "Legend"
@@ -118,7 +118,7 @@ for (i in c(1:12)) {
       geom_line(aes(x = date, y = shipped_tons, color = "Shipped Tons")) +
       geom_line(aes(x = date, y = booked_tons, color = "Booked Tons")) +
       labs(
-        title = str_c("Steel Booking/Availability/Shipping Trends of Material Type ", i),
+        title = str_c("Steel Booking/Availability/Shipping/Forecast Trends of Material Type ", i),
         x = "Date",
         y = "Tons of Steel",
         color = "Legend"
