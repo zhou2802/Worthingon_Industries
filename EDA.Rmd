@@ -1,0 +1,129 @@
+---
+title: "Exploratory Data Analysis"
+author: "Gordon Woolbert"
+date: "3/1/2022"
+output: html_document
+---
+
+# Setup
+```{r setup, include=FALSE}
+# Markdown Setup
+knitr::opts_chunk$set(echo = TRUE)
+
+# Necessary Packages
+library("tidyverse")
+
+# Load Data
+load("clean_data.RData")
+```
+
+# Check Data Integrity
+
+### Bookings
+```{r}
+# Check this with our guy?
+clean_bookings %>%
+  group_by(customer_ID, material_type_ID) %>%
+  summarize(
+    bookings = n(),
+    min_booking = min(booked_tons),
+    average_booking = mean(booked_tons),
+    max_booking = max(booked_tons)
+  )
+```
+
+### Other Tables?
+
+# Initial EDA
+```{r}
+# Determine exact interpretation from our guy?
+aggregate_bookings <- clean_bookings %>%
+  group_by(year, month, material_type_ID) %>%
+  summarize(aggregate_booked_tons = sum(booked_tons))
+
+aggregate_forecast <- clean_forecast %>%
+  group_by(year, month, material_type_ID) %>%
+  summarize(
+    aggregate_final_fc = sum(final_fc),
+    aggregate_2_month_lag_fc = sum(`_2_month_lag_fc`),
+    aggregate_1_month_lag_fc = sum(`_1_month_lag_fc`)
+  )
+
+aggregate_inventory_trends <- clean_inventory_trends %>%
+  group_by(year, month, material_type_ID) %>%
+  summarize(aggregate_available_tons = sum(available_tons))
+
+aggregate_shipments <- clean_shipments %>%
+  group_by(year, month, material_type_ID) %>%
+  summarize(aggregate_shipped_tons = sum(shipped_tons))
+
+aggregate_master <- aggregate_forecast %>%
+  full_join(
+    aggregate_inventory_trends,
+    by = c("year" = "year", "month" = "month", "material_type_ID" = "material_type_ID")
+  ) %>%
+  full_join(
+    aggregate_shipments,
+    by = c("year" = "year", "month" = "month", "material_type_ID" = "material_type_ID")
+  ) %>%
+   full_join(
+    aggregate_bookings,
+    by = c("year" = "year", "month" = "month", "material_type_ID" = "material_type_ID")
+  )
+```
+
+```{r}
+# Generate Fully Aggregated Trend Plot
+aggregate_master %>%
+  drop_na() %>%
+  group_by(year, month) %>%
+  summarize(
+    final_fc = sum(aggregate_final_fc),
+    available_tons = sum(aggregate_available_tons),
+    shipped_tons = sum(aggregate_shipped_tons),
+    booked_tons = sum(aggregate_booked_tons)
+  ) %>%
+  mutate(date = ISOdate(year, month, 1)) %>%
+  ggplot() +
+    geom_line(aes(x = date, y = final_fc, color = "Forecast Tons")) +
+    geom_line(aes(x = date, y = available_tons, color = "Available Tons")) +
+    geom_line(aes(x = date, y = shipped_tons, color = "Shipped Tons")) +
+    geom_line(aes(x = date, y = booked_tons, color = "Booked Tons")) +
+    labs(
+      title = "Steel Booking/Availability/Shipping Trends",
+      x = "Date",
+      y = "Tons of Steel",
+      color = "Legend"
+    )
+```
+
+```{r}
+# Generate Trend Plots for Individual Materials
+# For some Reason, there were no complete rows with data pertaining to material type 13
+for (i in c(1:12)) {
+  p <- aggregate_master %>%
+    drop_na() %>%
+    group_by(year, month, material_type_ID) %>%
+    summarize(
+      final_fc = sum(aggregate_final_fc),
+      available_tons = sum(aggregate_available_tons),
+      shipped_tons = sum(aggregate_shipped_tons),
+      booked_tons = sum(aggregate_booked_tons)
+    ) %>%
+    filter(material_type_ID == i) %>%
+    mutate(date = ISOdate(year, month, 1)) %>%
+    ggplot() +
+      geom_line(aes(x = date, y = final_fc, color = "Forecast Tons")) +
+      geom_line(aes(x = date, y = available_tons, color = "Available Tons")) +
+      geom_line(aes(x = date, y = shipped_tons, color = "Shipped Tons")) +
+      geom_line(aes(x = date, y = booked_tons, color = "Booked Tons")) +
+      labs(
+        title = str_c("Steel Booking/Availability/Shipping Trends of Material Type ", i),
+        x = "Date",
+        y = "Tons of Steel",
+        color = "Legend"
+      )
+  print(p)
+}
+```
+
