@@ -18,6 +18,8 @@ load("clean_data.RData")
 ```
 
 # Initial EDA
+
+### Trend Plots
 ```{r}
 # Determine exact interpretation from our guy?
 aggregate_bookings <- clean_bookings %>%
@@ -109,4 +111,88 @@ for (i in c(1:12)) {
   print(p)
 }
 ```
+
+### Shipments By Customer
+```{r}
+# Semi-Aggregated Master Table
+semi_aggregate_master <- clean_bookings %>%
+  group_by(year, month, customer_ID, material_type_ID) %>%
+  summarize(booked_tons = sum(booked_tons)) %>%
+  full_join(
+    clean_forecast %>%
+      group_by(year, month, customer_ID, material_type_ID) %>%
+      summarize(final_fc = sum(final_fc)),
+    by = c("year" = "year", "month" = "month", "customer_ID" = "customer_ID", "material_type_ID" = "material_type_ID")
+  ) %>%
+  full_join(
+    clean_inventory_trends %>%
+      group_by(year, month, customer_ID, material_type_ID) %>%
+      summarize(available_tons = sum(available_tons)),
+    by = c("year" = "year", "month" = "month", "customer_ID" = "customer_ID", "material_type_ID" = "material_type_ID")
+  ) %>%
+  full_join(
+    clean_shipments %>%
+      group_by(year, month, customer_ID, material_type_ID) %>%
+      summarize(shipped_tons = sum(shipped_tons)),
+    by = c("year" = "year", "month" = "month", "customer_ID" = "customer_ID", "material_type_ID" = "material_type_ID")
+  )
+```
+
+```{r}
+# Weird Bug in years 2020-2022, will fix later
+for (i in c(2017:2019)) {
+  p <- semi_aggregate_master %>%
+    group_by(year, customer_ID) %>%
+    summarize(shipped_tons = sum(shipped_tons)) %>%
+    filter(year == i) %>%
+    arrange(desc(shipped_tons)) %>%
+    head(4) %>%
+    select(year, customer_ID) %>%
+    inner_join(
+      semi_aggregate_master,
+      by = c("year" = "year", "customer_ID" = "customer_ID")
+    ) %>%
+    mutate(
+      date = ISOdate(year, month, 1),
+      customer_ID = as.factor(customer_ID)
+    ) %>%
+    group_by(date, customer_ID) %>%
+    summarize(shipped_tons = sum(shipped_tons)) %>%
+    ggplot() +
+      geom_line(aes(x = date, y = shipped_tons, color = customer_ID)) +
+      labs(title = str_c("Shipments to Top 4 Customers in ", i), x = "Date", y = "Shipped Tons", color = "Customer ID")
+  print(p)
+}
+```
+
+```{r}
+# Create Table with Percentage of Annual Material Output Shipped to Each Customer
+semi_aggregate_master %>%
+  group_by(year, customer_ID, material_type_ID) %>%
+  summarize(shipped_tons = sum(shipped_tons)) %>%
+  inner_join(
+    semi_aggregate_master %>%
+      group_by(year, material_type_ID) %>%
+      summarize(total_shipped_tons = sum(shipped_tons)),
+    by = c("year" = "year", "material_type_ID" = "material_type_ID")
+  ) %>%
+  mutate(monthly_material_prop = shipped_tons / total_shipped_tons)
+```
+
+```{r}
+# Create Table with Percentage of Annual Total Output to Each Customer
+semi_aggregate_master %>%
+  group_by(year, customer_ID) %>%
+  summarize(shipped_tons = sum(shipped_tons)) %>%
+  inner_join(
+    semi_aggregate_master %>%
+      group_by(year) %>%
+      summarize(total_shipped_tons = sum(shipped_tons)),
+    by = c("year" = "year")
+  ) %>%
+  mutate(material_prop = shipped_tons / total_shipped_tons)
+```
+
+
+
 
