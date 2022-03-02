@@ -17,23 +17,6 @@ library("tidyverse")
 load("clean_data.RData")
 ```
 
-# Check Data Integrity
-
-### Bookings
-```{r}
-# Check this with our guy?
-clean_bookings %>%
-  group_by(customer_ID, material_type_ID) %>%
-  summarize(
-    bookings = n(),
-    min_booking = min(booked_tons),
-    average_booking = mean(booked_tons),
-    max_booking = max(booked_tons)
-  )
-```
-
-### Other Tables?
-
 # Initial EDA
 ```{r}
 # Determine exact interpretation from our guy?
