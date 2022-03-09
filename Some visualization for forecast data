@@ -1,0 +1,194 @@
+---
+title: "Some visualization for forecast data"
+author: "Jiayi Zhou"
+date: "2022/3/8"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(patchwork)
+library(ggpubr)
+library(scales)
+```
+
+Aggregate data (Code copy from EDA.Rmd)
+```{r}
+aggregate_bookings <- clean_bookings %>%
+  group_by(year, month, material_type_ID) %>%
+  summarize(aggregate_booked_tons = sum(booked_tons))
+
+aggregate_forecast <- clean_forecast %>%
+  group_by(year, month, material_type_ID) %>%
+  summarize(
+    aggregate_final_fc = sum(final_fc),
+    aggregate_2_month_lag_fc = sum(`_2_month_lag_fc`),
+    aggregate_1_month_lag_fc = sum(`_1_month_lag_fc`)
+  )
+
+aggregate_inventory_trends <- clean_inventory_trends %>%
+  group_by(year, month, material_type_ID) %>%
+  summarize(aggregate_available_tons = sum(available_tons))
+
+aggregate_shipments <- clean_shipments %>%
+  group_by(year, month, material_type_ID) %>%
+  summarize(aggregate_shipped_tons = sum(shipped_tons))
+
+aggregate_master <- aggregate_forecast %>%
+  full_join(
+    aggregate_inventory_trends,
+    by = c("year" = "year", "month" = "month", "material_type_ID" = "material_type_ID")
+  ) %>%
+  full_join(
+    aggregate_shipments,
+    by = c("year" = "year", "month" = "month", "material_type_ID" = "material_type_ID")
+  ) %>%
+   full_join(
+    aggregate_bookings,
+    by = c("year" = "year", "month" = "month", "material_type_ID" = "material_type_ID")
+  )
+aggregate_master
+```
+
+Aggregate new dataframe about forecast (convenience for plot in the next part):
+```{r}
+aggregate_forecast2 <- clean_forecast %>%
+  filter(year != 2022) %>%
+  group_by(year, month) %>%
+  summarize(
+    aggregate_final_fc = sum(final_fc),
+    aggregate_2_month_lag_fc = sum(`_2_month_lag_fc`),
+    aggregate_1_month_lag_fc = sum(`_1_month_lag_fc`)
+  )
+
+aggregate_forecast2 <- aggregate_forecast2[order(aggregate_forecast2$year, aggregate_forecast2$month),]
+
+a = aggregate_forecast2$aggregate_final_fc
+b = a[-1]
+ratio = b/a[-length(a)]-1
+ratio <- c(0,ratio[1:47])
+
+new_aggregate_forecast2 <- data.frame(aggregate_forecast2$year, aggregate_forecast2$month, aggregate_forecast2$aggregate_final_fc,ratio)
+
+names(new_aggregate_forecast2) <- c('year', 'month', 'aggregate_final_fc', 'changes_ratio_in_month')
+
+new_aggregate_forecast2
+
+```
+
+Plot reflecting the forecast volume and changing rate trends from 2018 to 2021:
+```{r}
+forecast_plot1 <- new_aggregate_forecast2 %>%
+  mutate(date = ISOdate(year, month, 1)) %>%
+  ggplot(aes(x = date, y = aggregate_final_fc, group = 1,color = "Yellow")) +
+    geom_line() +
+    geom_point()+
+    theme_minimal()+
+    theme(legend.position = "none", axis.text.x = element_text(angle = 30, hjust=1), aspect.ratio = 0.8/4) +
+    labs(
+      title = "Forecast Trends & Change Rate",
+      x = "",
+      y = "Tons of Steel"
+    ) 
+
+forecast_plot2 <- new_aggregate_forecast2 %>% 
+  mutate(date = ISOdate(year, month, 1)) %>%
+  ggplot(aes(x=date,y=ratio))+
+  geom_bar(stat = "identity",fill = "#009E73")+
+  theme(axis.text.x = element_text(angle = 30, hjust=1), aspect.ratio = 0.97/4) +
+  labs(x = "Date", y = "Rate in Change")
+
+ggarrange(forecast_plot1, forecast_plot2, ncol = 1, nrow = 2)
+
+```
+
+Heatmap in material type and changes between 3 different time forecast tons:
+```{r}
+forecast_plot_1 <- aggregate_forecast %>%
+  filter(year != 2022) %>%
+  mutate(date = ISOdate(year, month, 1)) %>%
+  ggplot(aes(x = date, y= material_type_ID)) +
+  geom_tile(aes(fill =(aggregate_final_fc-aggregate_2_month_lag_fc)))+
+  theme(axis.text.x = element_text(angle = 30,hjust = 1)) +
+  scale_fill_viridis_c()+
+  scale_fill_gradient(name = "Difference in tons(final - 2 month lag)", high = "cyan", low = "dark blue") +
+  guides(shape = guide_legend(override.aes = list(size = 0.01))) +
+  theme(legend.title = element_text(size = 8), 
+        legend.text = element_text(size = 8), 
+        aspect.ratio = 1.5/4) +
+  labs(x = "", y = "Material type ID")+
+  scale_y_continuous(breaks = seq(1, 13, by = 1))
+
+forecast_plot_2 <- aggregate_forecast %>%
+  filter(year != 2022) %>%
+  mutate(date = ISOdate(year, month, 1)) %>%
+  ggplot(aes(x = date, y= material_type_ID)) +
+  geom_tile(aes(fill =(aggregate_final_fc-aggregate_1_month_lag_fc)))+
+  theme(axis.text.x = element_text(angle = 30,hjust = 1)) +
+  scale_fill_viridis_c()+
+  scale_fill_gradient(name = "Difference in tons(final - 1 month lag)", high = "cyan", low = "dark blue") +
+  guides(shape = guide_legend(override.aes = list(size = 0.01))) +
+  theme(legend.title = element_text(size = 8), 
+        legend.text = element_text(size = 8), 
+        aspect.ratio = 1.5/4) +
+  labs(x = "Date", y = "Material type ID")+
+  scale_y_continuous(breaks = seq(1, 13, by = 1))
+
+forecast_plot_3 <- aggregate_forecast %>%
+  filter(year != 2022) %>%
+  mutate(date = ISOdate(year, month, 1)) %>%
+  ggplot(aes(x = date, y= material_type_ID)) +
+  geom_tile(aes(fill =(aggregate_1_month_lag_fc-aggregate_2_month_lag_fc)))+
+  theme(axis.text.x = element_text(angle = 30,hjust = 1)) +
+  scale_fill_viridis_c()+
+  scale_fill_gradient(name = "Difference in tons(1 month lag - 2 month lag)", limit = c(-25000, 0), high = "green", low = "dark blue") +
+  guides(shape = guide_legend(override.aes = list(size = 0.01))) +
+  theme(legend.title = element_text(size = 8), 
+        legend.text = element_text(size = 8), 
+        aspect.ratio = 1.5/4) +
+  labs(x = "", y = "Material type ID")+
+  scale_y_continuous(breaks = seq(1, 13, by = 1))
+
+forecast_plot_4 <- aggregate_forecast %>%
+  filter(year != 2022) %>%
+  mutate(date = ISOdate(year, month, 1)) %>%
+  ggplot(aes(x = date, y= material_type_ID)) +
+  geom_tile(aes(fill =(aggregate_1_month_lag_fc-aggregate_2_month_lag_fc)))+
+  theme(axis.text.x = element_text(angle = 30,hjust = 1)) +
+  scale_fill_viridis_c()+
+  scale_fill_gradient(name = "Difference in tons(1 month lag - 2 month lag)", limit = c(1000, 30000), high = "green", low = "dark blue") +
+  guides(shape = guide_legend(override.aes = list(size = 0.01))) +
+  theme(legend.title = element_text(size = 8), 
+        legend.text = element_text(size = 8), 
+        aspect.ratio = 1.5/4) +
+  labs(x = "Date", y = "Material type ID")+
+  scale_y_continuous(breaks = seq(1, 13, by = 1))
+
+
+ggarrange(forecast_plot_1, forecast_plot_2, ncol = 1, nrow = 2)
+ggarrange(forecast_plot_3, forecast_plot_4, ncol = 1, nrow = 2)
+```
+
+Find interesting things in Material Type:
+```{r echo = TRUE, messgae=FALSE, warning= FALSE}
+for (i in c(1:12)) {
+material_plot <- aggregate_master%>%
+ filter(year != 2022 & material_type_ID == i) %>%
+    mutate(date = ISOdate(year, month, 1)) %>%
+    ggplot() +
+      geom_line(aes(x = date, y = aggregate_final_fc, color = "Final Forecast")) +
+      geom_line(aes(x = date, y = aggregate_1_month_lag_fc, color = "1 month lag Forecast")) +
+      geom_line(aes(x = date, y = aggregate_2_month_lag_fc, color = "2 month lag Forecast")) +
+      geom_line(aes(x = date, y = aggregate_booked_tons, color = "Booked Tons")) +
+      labs(
+        title = str_c("Forecast&Booked for Material_Type_", i),
+        x = "Date",
+        y = "Tons of Steel",
+        color = "Legend"
+      ) 
+  print(material_plot)
+}
+```
+
